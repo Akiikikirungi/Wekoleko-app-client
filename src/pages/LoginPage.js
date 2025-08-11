@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Link } from 'react-router-dom';
+import { FaUserCircle, FaLock, FaSignInAlt, FaSpinner } from 'react-icons/fa';
 
 const LoginPage = () => {
     const [email, setEmail] = useState('');
@@ -24,54 +25,55 @@ const LoginPage = () => {
     };
 
     return (
-        <div className="container">
-            <div className="form-container">
-                <div className="form-header">
-                    <div className="form-logo">
-                        <div className="logo-icon">🔧</div>
-                        <h2>Welcome Back</h2>
-                        <p>Sign in to your Wekoleko account</p>
-                    </div>
+        <div className="auth-container">
+            <div className="auth-card">
+                <div className="auth-header">
+                    <FaUserCircle className="auth-icon" />
+                    <h2 className="auth-title">Welcome Back</h2>
+                    <p className="auth-subtitle">Sign in to your Wekoleko account</p>
                 </div>
 
                 {message && (
-                    <div className={`alert ${isError ? 'alert-danger' : 'alert-success'}`}>
-                        <strong>{isError ? 'Error:' : 'Success:'}</strong> {message}
+                    <div className={`message-card ${isError ? 'error' : 'success'}`}>
+                        <div className="message-icon">{isError ? '❌' : '✅'}</div>
+                        <span>{message}</span>
                     </div>
                 )}
 
                 <form onSubmit={handleSubmit} className="auth-form">
-                    <div className="form-group">
-                        <label htmlFor="email">
-                            <span className="label-icon">📧</span>
+                    <div className="form-group-modern">
+                        <label htmlFor="email" className="form-label-modern">
                             Email Address
                         </label>
-                        <div className="input-wrapper">
+                        <div className="input-container">
+                            <FaUserCircle className="input-icon-modern" />
                             <input
                                 type="email"
                                 id="email"
+                                className="input-modern"
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
                                 required
-                                placeholder="Enter your email address"
+                                placeholder="your.email@example.com"
                                 disabled={isLoading}
                             />
                         </div>
                     </div>
 
-                    <div className="form-group">
-                        <label htmlFor="password">
-                            <span className="label-icon">🔒</span>
+                    <div className="form-group-modern">
+                        <label htmlFor="password" className="form-label-modern">
                             Password
                         </label>
-                        <div className="input-wrapper">
+                        <div className="input-container">
+                            <FaLock className="input-icon-modern" />
                             <input
                                 type="password"
                                 id="password"
+                                className="input-modern"
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
                                 required
-                                placeholder="Enter your password"
+                                placeholder="••••••••"
                                 disabled={isLoading}
                             />
                         </div>
@@ -79,32 +81,28 @@ const LoginPage = () => {
 
                     <button 
                         type="submit" 
-                        className="btn btn-primary btn-full-width"
+                        className="nav-btn primary auth-btn"
                         disabled={isLoading}
                     >
                         {isLoading ? (
                             <>
-                                <div className="loading-spinner-small"></div>
+                                <FaSpinner className="spin-icon" />
                                 <span>Signing in...</span>
                             </>
                         ) : (
                             <>
                                 <span>Sign In</span>
-                                <div className="btn-icon">→</div>
+                                <FaSignInAlt className="btn-icon" />
                             </>
                         )}
                     </button>
                 </form>
 
-                <div className="form-footer">
-                    <div className="divider">
-                        <span>New to Wekoleko?</span>
-                    </div>
+                <div className="auth-footer">
                     <p className="auth-switch">
                         Don't have an account? 
-                        <Link to="/register" className="auth-link">
+                        <Link to="/register" className="auth-link-modern">
                             Create one here
-                            <span className="link-arrow">→</span>
                         </Link>
                     </p>
                 </div>

@@ -4,6 +4,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import Navbar from './components/Navbar';
 import ProtectedRoute from './components/ProtectedRoute';
+import Footer from './components/Footer';
 
 // Pages
 import HomePage from './pages/HomePage';
@@ -30,6 +31,7 @@ function App() {
                         <Route path="/tickets/:id" element={<ProtectedRoute><TicketDetailsPage /></ProtectedRoute>} />
                     </Routes>
                 </main>
+                <Footer />
             </AuthProvider>
         </Router>
     );

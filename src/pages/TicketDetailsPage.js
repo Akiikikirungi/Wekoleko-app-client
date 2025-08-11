@@ -1,9 +1,11 @@
 // client/src/pages/TicketDetailsPage.js
 import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import API from '../api';
 import { format } from 'date-fns';
 import DatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
+import { FaEdit, FaTrash, FaCheckCircle, FaExclamationCircle, FaArrowLeft, FaTag, FaFileAlt, FaCalendarAlt, FaClock, FaImage, FaTimes, FaSave, FaSpinner, FaCamera } from 'react-icons/fa';
 
 const TicketDetailsPage = () => {
     const { id } = useParams();
@@ -13,6 +15,7 @@ const TicketDetailsPage = () => {
     const [error, setError] = useState('');
     const [message, setMessage] = useState('');
     const [isError, setIsError] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
 
     // State for editing
     const [isEditing, setIsEditing] = useState(false);
@@ -22,13 +25,12 @@ const TicketDetailsPage = () => {
     const [editStatus, setEditStatus] = useState('');
     const [editImage, setEditImage] = useState(null);
     const [imagePreview, setImagePreview] = useState('');
-
+    
     useEffect(() => {
         const fetchTicket = async () => {
             try {
                 const res = await API.get(`/tickets/${id}`);
                 setTicket(res.data);
-                // Initialize edit states
                 setEditTitle(res.data.title);
                 setEditDescription(res.data.description);
                 setEditDueDate(new Date(res.data.dueDate));
@@ -47,21 +49,25 @@ const TicketDetailsPage = () => {
 
     const handleMarkResolved = async () => {
         if (window.confirm('Mark this maintenance ticket as resolved?')) {
+            setIsLoading(true);
             try {
-                await API.put(`/tickets/${id}`, { status: 'resolved' });
-                setTicket(prev => ({ ...prev, status: 'resolved' }));
+                const res = await API.put(`/tickets/${id}`, { status: 'resolved' });
+                setTicket(prev => ({ ...prev, ...res.data }));
                 setMessage('Ticket successfully marked as resolved!');
                 setIsError(false);
             } catch (err) {
                 console.error('Error resolving ticket:', err.response ? err.response.data : err.message);
                 setMessage(err.response?.data?.msg || 'Failed to mark ticket as resolved.');
                 setIsError(true);
+            } finally {
+                setIsLoading(false);
             }
         }
     };
 
     const handleDelete = async () => {
         if (window.confirm('⚠️ Delete this ticket permanently? This action cannot be undone.')) {
+            setIsLoading(true);
             try {
                 await API.delete(`/tickets/${id}`);
                 setMessage('Ticket deleted successfully! Redirecting...');
@@ -71,12 +77,15 @@ const TicketDetailsPage = () => {
                 console.error('Error deleting ticket:', err.response ? err.response.data : err.message);
                 setMessage(err.response?.data?.msg || 'Failed to delete ticket.');
                 setIsError(true);
+            } finally {
+                setIsLoading(false);
             }
         }
     };
 
     const handleEditSubmit = async (e) => {
         e.preventDefault();
+        setIsLoading(true);
         setMessage('');
         setIsError(false);
 
@@ -91,11 +100,9 @@ const TicketDetailsPage = () => {
 
         try {
             const res = await API.put(`/tickets/${id}`, formData, {
-                headers: {
-                    'Content-Type': 'multipart/form-data',
-                },
+                headers: { 'Content-Type': 'multipart/form-data' },
             });
-            setTicket(res.data);
+            setTicket(prev => ({ ...prev, ...res.data }));
             setIsEditing(false);
             setEditImage(null);
             setMessage('Ticket updated successfully!');
@@ -104,6 +111,8 @@ const TicketDetailsPage = () => {
             console.error('Error updating ticket:', err.response ? err.response.data : err.message);
             setMessage(err.response?.data?.msg || 'Failed to update ticket.');
             setIsError(true);
+        } finally {
+            setIsLoading(false);
         }
     };
 
@@ -134,7 +143,7 @@ const TicketDetailsPage = () => {
         return (
             <div className="container">
                 <div className="loading-container">
-                    <div className="loading-spinner"></div>
+                    <FaSpinner className="loading-spinner spin-icon-large" />
                     <div className="loading-text">Loading ticket details...</div>
                 </div>
             </div>
@@ -144,8 +153,9 @@ const TicketDetailsPage = () => {
     if (error) {
         return (
             <div className="container">
-                <div className="alert alert-danger">
-                    <strong>Error:</strong> {error}
+                <div className="message-card error">
+                    <div className="message-icon">❌</div>
+                    <span><strong>Error:</strong> {error}</span>
                 </div>
             </div>
         );
@@ -158,9 +168,9 @@ const TicketDetailsPage = () => {
                     <div className="empty-icon">❓</div>
                     <h3>Ticket not found</h3>
                     <p>The requested maintenance ticket could not be found or is not accessible.</p>
-                    <button onClick={() => navigate('/dashboard')} className="btn btn-primary">
+                    <button onClick={() => navigate('/dashboard')} className="btn btn-primary btn-empty-state">
                         <span>Back to Dashboard</span>
-                        <div className="btn-icon">←</div>
+                        <FaArrowLeft className="btn-icon" />
                     </button>
                 </div>
             </div>
@@ -171,256 +181,245 @@ const TicketDetailsPage = () => {
     const daysUntilDue = Math.ceil((new Date(ticket.dueDate) - new Date()) / (1000 * 60 * 60 * 24));
 
     return (
-        <div className="container">
-            <div className="ticket-detail-card">
-                {message && (
-                    <div className={`alert ${isError ? 'alert-danger' : 'alert-success'}`}>
-                        <strong>{isError ? 'Error:' : 'Success:'}</strong> {message}
+        <div className="container ticket-details-page">
+            <div className="page-header-modern">
+                <div className="header-content">
+                    <FaTag className="header-icon" />
+                    <div>
+                        <h1>Ticket Details</h1>
+                        <p>Detailed view of your maintenance ticket</p>
                     </div>
-                )}
+                </div>
+            </div>
 
-                {!isEditing ? (
-                    <>
-                        <div className="ticket-header">
-                            <div className="ticket-title-section">
-                                <h2 className="ticket-title">{ticket.title}</h2>
-                                <div className="ticket-meta">
-                                    <span className={`status-badge ${ticket.status}`}>
-                                        <span className="status-icon">
-                                            {ticket.status === 'open' ? '🔄' : '✅'}
-                                        </span>
-                                        {ticket.status.charAt(0).toUpperCase() + ticket.status.slice(1)}
+            {message && (
+                <div className={`message-card ${isError ? 'error' : 'success'}`}>
+                    <div className="message-icon">{isError ? '❌' : '✅'}</div>
+                    <span>{message}</span>
+                </div>
+            )}
+
+            {!isEditing ? (
+                <div className="ticket-detail-card">
+                    <div className="ticket-detail-header">
+                        <div className="ticket-title-section-detail">
+                            <h2>{ticket.title}</h2>
+                            <div className="ticket-meta-detail">
+                                <span className={`status-chip ${ticket.status}`}>
+                                    <span className="status-dot"></span>
+                                    {ticket.status.charAt(0).toUpperCase() + ticket.status.slice(1)}
+                                </span>
+                                {isOverdue && (
+                                    <span className="priority-chip danger">
+                                        <FaExclamationCircle className="chip-icon" />
+                                        Overdue
                                     </span>
-                                    {isOverdue && (
-                                        <span className="overdue-badge">
-                                            <span className="overdue-icon">⚠️</span>
-                                            Overdue
-                                        </span>
-                                    )}
-                                    {!isOverdue && ticket.status === 'open' && (
-                                        <span className="days-remaining">
-                                            {daysUntilDue > 0 ? `${daysUntilDue} days remaining` : 'Due today'}
-                                        </span>
-                                    )}
-                                </div>
+                                )}
+                                {!isOverdue && ticket.status === 'open' && (
+                                    <span className="priority-chip warning">
+                                        <FaCalendarAlt className="chip-icon" />
+                                        {daysUntilDue > 0 ? `Due in ${daysUntilDue} day${daysUntilDue > 1 ? 's' : ''}` : 'Due today'}
+                                    </span>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="ticket-detail-content">
+                        <div className="detail-section-modern">
+                            <h3 className="detail-title-modern">
+                                <FaFileAlt className="detail-icon-modern" />
+                                Description
+                            </h3>
+                            <div className="detail-content-text">
+                                <p>{ticket.description}</p>
                             </div>
                         </div>
 
-                        <div className="ticket-content">
-                            <div className="detail-section">
-                                <h3 className="detail-title">
-                                    <span className="detail-icon">📝</span>
-                                    Description
-                                </h3>
-                                <div className="detail-content">
-                                    <p>{ticket.description}</p>
+                        <div className="detail-section-modern">
+                            <h3 className="detail-title-modern">
+                                <FaClock className="detail-icon-modern" />
+                                Timeline
+                            </h3>
+                            <div className="detail-content-grid">
+                                <div className="timeline-item-modern">
+                                    <div className="timeline-label">Due Date</div>
+                                    <div className="timeline-value">
+                                        {format(new Date(ticket.dueDate), 'EEEE, MMMM do, yyyy')}
+                                    </div>
                                 </div>
-                            </div>
-
-                            <div className="detail-section">
-                                <h3 className="detail-title">
-                                    <span className="detail-icon">📅</span>
-                                    Timeline
-                                </h3>
-                                <div className="detail-content timeline-grid">
-                                    <div className="timeline-item">
-                                        <div className="timeline-label">Due Date</div>
+                                <div className="timeline-item-modern">
+                                    <div className="timeline-label">Created</div>
+                                    <div className="timeline-value">
+                                        {format(new Date(ticket.createdAt), 'MMM do, yyyy \'at\' h:mm a')}
+                                    </div>
+                                </div>
+                                {ticket.updatedAt && ticket.updatedAt !== ticket.createdAt && (
+                                    <div className="timeline-item-modern">
+                                        <div className="timeline-label">Last Updated</div>
                                         <div className="timeline-value">
-                                            {format(new Date(ticket.dueDate), 'EEEE, MMMM do, yyyy')}
+                                            {format(new Date(ticket.updatedAt), 'MMM do, yyyy \'at\' h:mm a')}
                                         </div>
                                     </div>
-                                    <div className="timeline-item">
-                                        <div className="timeline-label">Created</div>
-                                        <div className="timeline-value">
-                                            {format(new Date(ticket.createdAt), 'MMM do, yyyy \'at\' h:mm a')}
-                                        </div>
-                                    </div>
-                                    {ticket.updatedAt && ticket.updatedAt !== ticket.createdAt && (
-                                        <div className="timeline-item">
-                                            <div className="timeline-label">Last Updated</div>
-                                            <div className="timeline-value">
-                                                {format(new Date(ticket.updatedAt), 'MMM do, yyyy \'at\' h:mm a')}
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-
-                            {ticket.imageUrl && (
-                                <div className="detail-section">
-                                    <h3 className="detail-title">
-                                        <span className="detail-icon">📸</span>
-                                        Attached Image
-                                    </h3>
-                                    <div className="detail-content">
-                                        <div className="image-container">
-                                            <img 
-                                                src={ticket.imageUrl} 
-                                                alt={ticket.title} 
-                                                className="ticket-image"
-                                                onClick={() => window.open(ticket.imageUrl, '_blank')}
-                                            />
-                                            <div className="image-overlay">
-                                                <span>Click to view full size</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-
-                        <div className="ticket-actions">
-                            {ticket.status === 'open' && (
-                                <button onClick={handleMarkResolved} className="btn btn-primary action-btn">
-                                    <span className="btn-icon">✅</span>
-                                    <span>Mark as Resolved</span>
-                                </button>
-                            )}
-                            <button onClick={() => setIsEditing(true)} className="btn btn-secondary action-btn">
-                                <span className="btn-icon">✏️</span>
-                                <span>Edit Ticket</span>
-                            </button>
-                            <button onClick={handleDelete} className="btn btn-danger action-btn">
-                                <span className="btn-icon">🗑️</span>
-                                <span>Delete</span>
-                            </button>
-                            <button onClick={() => navigate('/dashboard')} className="btn action-btn">
-                                <span className="btn-icon">←</span>
-                                <span>Back to Dashboard</span>
-                            </button>
-                        </div>
-                    </>
-                ) : (
-                    // Edit Mode Form
-                    <div className="edit-mode">
-                        <div className="form-header">
-                            <div className="form-logo">
-                                <div className="logo-icon">✏️</div>
-                                <h2>Edit Maintenance Ticket</h2>
-                                <p>Update ticket information and status</p>
+                                )}
                             </div>
                         </div>
 
-                        <form onSubmit={handleEditSubmit} className="edit-form">
-                            <div className="form-section">
-                                <h3 className="section-title">
-                                    <span className="section-icon">📝</span>
-                                    Basic Information
+                        {ticket.imageUrl && (
+                            <div className="detail-section-modern">
+                                <h3 className="detail-title-modern">
+                                    <FaImage className="detail-icon-modern" />
+                                    Attached Image
                                 </h3>
-
-                                <div className="form-group">
-                                    <label htmlFor="editTitle">
-                                        <span className="label-icon">🏷️</span>
-                                        Title
-                                    </label>
-                                    <input
-                                        type="text"
-                                        id="editTitle"
-                                        value={editTitle}
-                                        onChange={(e) => setEditTitle(e.target.value)}
-                                        required
-                                        placeholder="Ticket title"
+                                <div className="image-container-modern-detail">
+                                    <img 
+                                        src={ticket.imageUrl} 
+                                        alt={ticket.title} 
+                                        className="ticket-image-detail"
+                                        onClick={() => window.open(ticket.imageUrl, '_blank')}
                                     />
                                 </div>
+                            </div>
+                        )}
+                    </div>
 
-                                <div className="form-group">
-                                    <label htmlFor="editDescription">
-                                        <span className="label-icon">📄</span>
-                                        Description
-                                    </label>
-                                    <textarea
-                                        id="editDescription"
-                                        value={editDescription}
-                                        onChange={(e) => setEditDescription(e.target.value)}
-                                        required
-                                        placeholder="Detailed description"
-                                    ></textarea>
-                                </div>
+                    <div className="ticket-detail-actions">
+                        {ticket.status === 'open' && (
+                            <button onClick={handleMarkResolved} className="nav-btn primary" disabled={isLoading}>
+                                {isLoading ? (
+                                    <FaSpinner className="spin-icon" />
+                                ) : (
+                                    <FaCheckCircle className="btn-icon" />
+                                )}
+                                <span>Mark as Resolved</span>
+                            </button>
+                        )}
+                        <button onClick={() => setIsEditing(true)} className="nav-btn secondary">
+                            <FaEdit className="btn-icon" />
+                            <span>Edit Ticket</span>
+                        </button>
+                        <button onClick={handleDelete} className="nav-btn danger" disabled={isLoading}>
+                            {isLoading ? (
+                                <FaSpinner className="spin-icon" />
+                            ) : (
+                                <FaTrash className="btn-icon" />
+                            )}
+                            <span>Delete</span>
+                        </button>
+                    </div>
+                </div>
+            ) : (
+                // Edit Mode Form
+                <div className="form-card-modern edit-ticket-form">
+                    <form onSubmit={handleEditSubmit}>
+                        <h3 className="section-title">Edit Ticket Information</h3>
+
+                        <div className="form-group-modern">
+                            <label htmlFor="editTitle" className="form-label-modern">
+                                Title
+                            </label>
+                            <input
+                                type="text"
+                                id="editTitle"
+                                className="input-modern"
+                                value={editTitle}
+                                onChange={(e) => setEditTitle(e.target.value)}
+                                required
+                            />
+                        </div>
+
+                        <div className="form-group-modern">
+                            <label htmlFor="editDescription" className="form-label-modern">
+                                Description
+                            </label>
+                            <textarea
+                                id="editDescription"
+                                className="textarea-modern"
+                                value={editDescription}
+                                onChange={(e) => setEditDescription(e.target.value)}
+                                required
+                            ></textarea>
+                        </div>
+
+                        <div className="form-section-edit-grid">
+                            <div className="form-group-modern">
+                                <label htmlFor="editDueDate" className="form-label-modern">
+                                    Due Date
+                                </label>
+                                <DatePicker
+                                    selected={editDueDate}
+                                    onChange={(date) => setEditDueDate(date)}
+                                    dateFormat="EEEE, MMMM do, yyyy"
+                                    className="input-modern"
+                                />
                             </div>
 
-                            <div className="form-section">
-                                <h3 className="section-title">
-                                    <span className="section-icon">⚙️</span>
-                                    Settings
-                                </h3>
-
-                                <div className="form-row">
-                                    <div className="form-group date-picker-container">
-                                        <label htmlFor="editDueDate">
-                                            <span className="label-icon">📅</span>
-                                            Due Date
-                                        </label>
-                                        <DatePicker
-                                            selected={editDueDate}
-                                            onChange={(date) => setEditDueDate(date)}
-                                            dateFormat="EEEE, MMMM do, yyyy"
-                                            required
-                                        />
-                                    </div>
-
-                                    <div className="form-group">
-                                        <label htmlFor="editStatus">
-                                            <span className="label-icon">🔄</span>
-                                            Status
-                                        </label>
-                                        <select
-                                            id="editStatus"
-                                            value={editStatus}
-                                            onChange={(e) => setEditStatus(e.target.value)}
-                                            className="status-select"
-                                        >
-                                            <option value="open">🔄 Open</option>
-                                            <option value="resolved">✅ Resolved</option>
-                                        </select>
-                                    </div>
-                                </div>
+                            <div className="form-group-modern">
+                                <label htmlFor="editStatus" className="form-label-modern">
+                                    Status
+                                </label>
+                                <select
+                                    id="editStatus"
+                                    className="input-modern"
+                                    value={editStatus}
+                                    onChange={(e) => setEditStatus(e.target.value)}
+                                >
+                                    <option value="open">Open</option>
+                                    <option value="resolved">Resolved</option>
+                                </select>
                             </div>
+                        </div>
 
-                            <div className="form-section">
-                                <h3 className="section-title">
-                                    <span className="section-icon">📸</span>
-                                    Image
-                                </h3>
-
-                                <div className="form-group">
-                                    <label htmlFor="editImage">
-                                        <span className="label-icon">🖼️</span>
-                                        Update Image (Optional)
-                                    </label>
+                        <div className="form-group-modern">
+                            <label htmlFor="editImage" className="form-label-modern">
+                                Update Image (Optional)
+                            </label>
+                            <div className="image-upload-edit">
+                                <label htmlFor="editImage" className="upload-dropzone-edit">
+                                    <FaCamera className="upload-icon" />
+                                    <span>Drag and drop an image or <span className="primary-text">click to upload</span></span>
                                     <input
                                         type="file"
                                         id="editImage"
                                         accept="image/*"
+                                        className="file-input-hidden"
                                         onChange={handleEditImageChange}
                                     />
-                                    {imagePreview && (
-                                        <div className="image-preview-edit">
-                                            <img 
-                                                src={imagePreview} 
-                                                alt="Preview" 
-                                                className="preview-image"
-                                            />
-                                            <div className="preview-label">
-                                                {editImage ? 'New image selected' : 'Current image'}
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
+                                </label>
+                                {imagePreview && (
+                                    <div className="image-preview-edit">
+                                        <img src={imagePreview} alt="Preview" className="preview-image-edit" />
+                                        <button type="button" className="remove-image-button-edit" onClick={() => { setEditImage(null); setImagePreview(''); }}>
+                                            <FaTimes />
+                                        </button>
+                                    </div>
+                                )}
                             </div>
+                        </div>
 
-                            <div className="form-actions">
-                                <button type="submit" className="btn btn-primary action-btn">
-                                    <span className="btn-icon">💾</span>
-                                    <span>Save Changes</span>
-                                </button>
-                                <button type="button" onClick={handleCancelEdit} className="btn btn-secondary action-btn">
-                                    <span className="btn-icon">❌</span>
-                                    <span>Cancel</span>
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                )}
+                        <div className="form-navigation">
+                            <button type="submit" className="nav-btn primary" disabled={isLoading}>
+                                {isLoading ? (
+                                    <FaSpinner className="spin-icon" />
+                                ) : (
+                                    <FaSave className="btn-icon" />
+                                )}
+                                <span>Save Changes</span>
+                            </button>
+                            <button type="button" onClick={handleCancelEdit} className="nav-btn secondary">
+                                <FaTimes className="btn-icon" />
+                                <span>Cancel</span>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            )}
+            
+            <div className="back-to-dashboard">
+                <Link to="/dashboard" className="nav-btn">
+                    <FaArrowLeft className="btn-icon" />
+                    <span>Back to Dashboard</span>
+                </Link>
             </div>
         </div>
     );

@@ -1,9 +1,12 @@
 // client/src/components/TicketCard.js
-import React from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { format } from 'date-fns';
+import { format, isToday, isTomorrow, isYesterday } from 'date-fns';
 
 const TicketCard = ({ ticket }) => {
+    const [imageLoaded, setImageLoaded] = useState(false);
+    const [imageError, setImageError] = useState(false);
+    
     const isPastDue = ticket.status === 'open' && new Date(ticket.dueDate) < new Date();
     const daysUntilDue = Math.ceil((new Date(ticket.dueDate) - new Date()) / (1000 * 60 * 60 * 24));
     
@@ -14,111 +17,163 @@ const TicketCard = ({ ticket }) => {
         return 'normal';
     };
 
+    const formatDueDate = (date) => {
+        const dueDate = new Date(date);
+        if (isToday(dueDate)) return 'Today';
+        if (isTomorrow(dueDate)) return 'Tomorrow';
+        if (isYesterday(dueDate)) return 'Yesterday';
+        return format(dueDate, 'MMM do, yyyy');
+    };
+
+    const getUrgencyDisplay = () => {
+        if (isPastDue) {
+            const overdueDays = Math.abs(daysUntilDue);
+            return {
+                text: overdueDays === 1 ? '1 day overdue' : `${overdueDays} days overdue`,
+                icon: '🚨',
+                className: 'urgency-overdue'
+            };
+        }
+        if (daysUntilDue === 0) return { text: 'Due Today', icon: '⏰', className: 'urgency-urgent' };
+        if (daysUntilDue === 1) return { text: 'Due Tomorrow', icon: '📅', className: 'urgency-soon' };
+        if (daysUntilDue <= 3) return { text: `${daysUntilDue} days left`, icon: '⏰', className: 'urgency-soon' };
+        return { text: `${daysUntilDue} days left`, icon: '📅', className: 'urgency-normal' };
+    };
+
     const urgencyLevel = getUrgencyLevel();
+    const urgencyDisplay = getUrgencyDisplay();
+    const createdDate = format(new Date(ticket.createdAt), 'MMM do, yyyy');
 
     return (
-        <div className={`ticket-card ${urgencyLevel} ${ticket.status}`}>
-            <div className="card-header">
-                <h3 className="card-title">{ticket.title}</h3>
-                <div className="card-badges">
-                    <span className={`status-badge status-${ticket.status}`}>
-                        <span className="status-icon">
-                            {ticket.status === 'open' ? '🔄' : '✅'}
-                        </span>
-                        <span className="status-text">
-                            {ticket.status.charAt(0).toUpperCase() + ticket.status.slice(1)}
-                        </span>
+        <div className={`ticket-card-modern ${urgencyLevel} ${ticket.status}`}>
+            {/* Priority Indicator */}
+            {(urgencyLevel === 'overdue' || urgencyLevel === 'urgent') && (
+                <div className="priority-ribbon">
+                    <span className="priority-text">
+                        {urgencyLevel === 'overdue' ? 'OVERDUE' : 'URGENT'}
                     </span>
                 </div>
-            </div>
+            )}
 
-            <div className="card-content">
-                <div className="card-info">
-                    <div className="info-item">
-                        <span className="info-icon">📅</span>
-                        <div className="info-content">
-                            <div className="info-label">Due Date</div>
-                            <div className="info-value">
-                                {format(new Date(ticket.dueDate), 'MMM do, yyyy')}
-                            </div>
-                        </div>
-                    </div>
-
-                    {ticket.status === 'open' && (
-                        <div className="info-item urgency-info">
-                            <span className="info-icon">
-                                {isPastDue ? '⚠️' : daysUntilDue <= 1 ? '🔥' : '⏰'}
-                            </span>
-                            <div className="info-content">
-                                <div className="info-label">Status</div>
-                                <div className={`info-value urgency-${urgencyLevel}`}>
-                                    {isPastDue 
-                                        ? 'OVERDUE' 
-                                        : daysUntilDue === 0 
-                                        ? 'Due Today' 
-                                        : daysUntilDue === 1 
-                                        ? 'Due Tomorrow'
-                                        : `${daysUntilDue} days left`
-                                    }
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
-                    {ticket.description && (
-                        <div className="card-description">
-                            <p>{ticket.description.length > 100 
-                                ? `${ticket.description.substring(0, 100)}...` 
-                                : ticket.description
-                            }</p>
-                        </div>
-                    )}
-                </div>
-
-                {ticket.imageUrl && (
-                    <div className="card-image">
-                        <img 
-                            src={ticket.imageUrl} 
-                            alt={ticket.title} 
-                            className="ticket-thumbnail"
-                            loading="lazy"
-                        />
-                        <div className="image-overlay">
-                            <span className="image-indicator">📸</span>
-                        </div>
-                    </div>
-                )}
-            </div>
-
-            <div className="card-actions">
-                <Link 
-                    to={`/tickets/${ticket._id}`} 
-                    className="btn btn-primary btn-card-action"
-                >
-                    <span className="btn-icon">👁️</span>
-                    <span>View Details</span>
-                </Link>
-                
-                {ticket.status === 'open' && (
-                    <div className="quick-actions">
-                        <span className="quick-action-hint">
-                            Click to view and manage this ticket
+            {/* Card Header */}
+            <div className="card-header-modern">
+                <div className="ticket-title-section">
+                    <h3 className="ticket-title-modern">{ticket.title}</h3>
+                    <div className="ticket-meta">
+                        <span className="creation-date">
+                            <span className="meta-icon">📝</span>
+                            Created {createdDate}
                         </span>
                     </div>
-                )}
+                </div>
+                
+                <div className="status-section">
+                    <div className={`status-chip ${ticket.status}`}>
+                        <span className="status-dot"></span>
+                        <span className="status-label">
+                            {ticket.status === 'open' ? 'Active' : 'Completed'}
+                        </span>
+                    </div>
+                </div>
             </div>
 
-            {urgencyLevel === 'overdue' && (
-                <div className="urgency-indicator overdue-indicator">
-                    <span className="pulse-dot"></span>
-                    <span>OVERDUE</span>
+            {/* Due Date Section */}
+            <div className="due-date-section">
+                <div className="due-date-card">
+                    <div className="due-date-icon">
+                        <span>{urgencyDisplay.icon}</span>
+                    </div>
+                    <div className="due-date-info">
+                        <span className="due-date-label">Due Date</span>
+                        <span className="due-date-value">{formatDueDate(ticket.dueDate)}</span>
+                        {ticket.status === 'open' && (
+                            <span className={`urgency-status ${urgencyDisplay.className}`}>
+                                {urgencyDisplay.text}
+                            </span>
+                        )}
+                    </div>
+                </div>
+            </div>
+
+            {/* Description */}
+            {ticket.description && (
+                <div className="description-section">
+                    <p className="description-text">
+                        {ticket.description.length > 120 
+                            ? `${ticket.description.substring(0, 120)}...` 
+                            : ticket.description
+                        }
+                    </p>
                 </div>
             )}
-            
-            {urgencyLevel === 'urgent' && (
-                <div className="urgency-indicator urgent-indicator">
-                    <span className="pulse-dot"></span>
-                    <span>URGENT</span>
+
+            {/* Image Section */}
+            {ticket.imageUrl && (
+                <div className="image-section">
+                    <div className="image-container-modern">
+                        {!imageError ? (
+                            <>
+                                {!imageLoaded && (
+                                    <div className="image-skeleton">
+                                        <div className="skeleton-shimmer"></div>
+                                        <span className="loading-icon">📷</span>
+                                    </div>
+                                )}
+                                <img 
+                                    src={ticket.imageUrl} 
+                                    alt={ticket.title} 
+                                    className={`ticket-image-modern ${imageLoaded ? 'loaded' : ''}`}
+                                    loading="lazy"
+                                    onLoad={() => setImageLoaded(true)}
+                                    onError={() => setImageError(true)}
+                                    style={{ display: imageLoaded ? 'block' : 'none' }}
+                                />
+                            </>
+                        ) : (
+                            <div className="image-error">
+                                <span className="error-icon">🖼️</span>
+                                <span className="error-text">Image not available</span>
+                            </div>
+                        )}
+                        
+                        <div className="image-overlay-modern">
+                            <span className="overlay-text">View Image</span>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Action Section */}
+            <div className="card-actions-modern">
+                <Link 
+                    to={`/tickets/${ticket._id}`} 
+                    className="view-details-btn"
+                >
+                    <span className="btn-content">
+                        <span className="btn-icon-modern">👁️</span>
+                        <span className="btn-text">View Details</span>
+                    </span>
+                    <div className="btn-arrow">→</div>
+                </Link>
+                
+                <div className="quick-info">
+                    <span className="ticket-id">#{ticket._id.slice(-6).toUpperCase()}</span>
+                </div>
+            </div>
+
+            {/* Progress Bar for Due Date */}
+            {ticket.status === 'open' && (
+                <div className="progress-section">
+                    <div className="progress-bar">
+                        <div 
+                            className={`progress-fill ${urgencyLevel}`}
+                            style={{
+                                width: `${Math.min(100, Math.max(10, 
+                                    isPastDue ? 100 : (1 - (daysUntilDue / 30)) * 100
+                                ))}%`
+                            }}
+                        ></div>
+                    </div>
                 </div>
             )}
         </div>

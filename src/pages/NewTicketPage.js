@@ -6,15 +6,28 @@ import API from '../api';
 import { useNavigate } from 'react-router-dom';
 
 const NewTicketPage = () => {
-    const [title, setTitle] = useState('');
-    const [description, setDescription] = useState('');
-    const [dueDate, setDueDate] = useState(new Date());
+    const [formData, setFormData] = useState({
+        title: '',
+        description: '',
+        dueDate: new Date(),
+        priority: 'medium'
+    });
     const [image, setImage] = useState(null);
     const [imagePreview, setImagePreview] = useState(null);
     const [message, setMessage] = useState('');
     const [isError, setIsError] = useState(false);
     const [loading, setLoading] = useState(false);
+    const [currentStep, setCurrentStep] = useState(1);
+    const [isDragOver, setIsDragOver] = useState(false);
+    
     const navigate = useNavigate();
+
+    const handleInputChange = (field, value) => {
+        setFormData(prev => ({
+            ...prev,
+            [field]: value
+        }));
+    };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -22,251 +35,381 @@ const NewTicketPage = () => {
         setMessage('');
         setIsError(false);
 
-        const formData = new FormData();
-        formData.append('title', title);
-        formData.append('description', description);
-        formData.append('dueDate', dueDate.toISOString());
+        const submitData = new FormData();
+        submitData.append('title', formData.title);
+        submitData.append('description', formData.description);
+        submitData.append('dueDate', formData.dueDate.toISOString());
+        submitData.append('priority', formData.priority);
+        
         if (image) {
-            formData.append('image', image);
+            submitData.append('image', image);
         }
 
         try {
-            const res = await API.post('/tickets', formData, {
-                headers: {
-                    'Content-Type': 'multipart/form-data',
-                },
+            await API.post('/tickets', submitData, {
+                headers: { 'Content-Type': 'multipart/form-data' },
             });
-            setMessage('Maintenance ticket created successfully! Redirecting...');
+            
+            setMessage('🎉 Maintenance ticket created successfully!');
             setIsError(false);
-            setLoading(false);
-            setTimeout(() => navigate('/dashboard'), 1500);
+            
+            // Show success message then redirect
+            setTimeout(() => navigate('/dashboard'), 2000);
         } catch (err) {
-            console.error('Error creating ticket:', err.response ? err.response.data : err.message);
+            console.error('Error creating ticket:', err);
             setMessage(err.response?.data?.msg || 'Failed to create ticket. Please try again.');
             setIsError(true);
+        } finally {
             setLoading(false);
         }
     };
 
-    const handleImageChange = (e) => {
-        if (e.target.files[0]) {
-            const file = e.target.files[0];
+    const handleImageChange = (file) => {
+        if (file && file.type.startsWith('image/')) {
             setImage(file);
             
-            // Create preview
             const reader = new FileReader();
             reader.onload = (e) => setImagePreview(e.target.result);
             reader.readAsDataURL(file);
-        } else {
-            setImage(null);
-            setImagePreview(null);
         }
+    };
+
+    const handleFileInputChange = (e) => {
+        const file = e.target.files[0];
+        if (file) handleImageChange(file);
+    };
+
+    const handleDragOver = (e) => {
+        e.preventDefault();
+        setIsDragOver(true);
+    };
+
+    const handleDragLeave = (e) => {
+        e.preventDefault();
+        setIsDragOver(false);
+    };
+
+    const handleDrop = (e) => {
+        e.preventDefault();
+        setIsDragOver(false);
+        
+        const file = e.dataTransfer.files[0];
+        if (file) handleImageChange(file);
     };
 
     const removeImage = () => {
         setImage(null);
         setImagePreview(null);
-        document.getElementById('image').value = '';
+        document.getElementById('image-input').value = '';
     };
 
-    const getCharacterCount = (text, max) => {
-        const current = text.length;
-        const remaining = max - current;
-        return { current, remaining, isOverLimit: remaining < 0 };
+    const nextStep = () => {
+        if (currentStep < 3) setCurrentStep(currentStep + 1);
     };
 
-    const titleCount = getCharacterCount(title, 100);
-    const descriptionCount = getCharacterCount(description, 1000);
+    const prevStep = () => {
+        if (currentStep > 1) setCurrentStep(currentStep - 1);
+    };
+
+    const getCharacterCount = (text, max) => ({
+        current: text.length,
+        remaining: max - text.length,
+        isOverLimit: text.length > max
+    });
+
+    const titleCount = getCharacterCount(formData.title, 100);
+    const descriptionCount = getCharacterCount(formData.description, 1000);
+    
+    const isStepValid = (step) => {
+        switch (step) {
+            case 1: return formData.title.trim() && !titleCount.isOverLimit;
+            case 2: return formData.description.trim() && !descriptionCount.isOverLimit;
+            case 3: return true;
+            default: return false;
+        }
+    };
+
+    const getPriorityColor = (priority) => {
+        switch (priority) {
+            case 'high': return '#ef4444';
+            case 'medium': return '#f59e0b';
+            case 'low': return '#10b981';
+            default: return '#6b7280';
+        }
+    };
 
     return (
         <div className="container">
-            <div className="form-container ticket-form">
-                <div className="form-header">
-                    <div className="form-logo">
-                        <div className="logo-icon">🎫</div>
-                        <h2>Create New Maintenance Ticket</h2>
-                        <p>Document and track your maintenance tasks efficiently</p>
+            <div className="new-ticket-container">
+                {/* Header Section */}
+                <div className="page-header-modern">
+                    <div className="header-content">
+                        <div className="header-icon">🎫</div>
+                        <div className="header-text">
+                            <h1>Create New Ticket</h1>
+                            <p>Document your maintenance task with detailed information</p>
+                        </div>
+                    </div>
+                    
+                    {/* Progress Indicator */}
+                    <div className="progress-indicator">
+                        <div className="step-counter">Step {currentStep} of 3</div>
+                        <div className="progress-bar-container">
+                            <div 
+                                className="progress-bar-fill"
+                                style={{ width: `${(currentStep / 3) * 100}%` }}
+                            ></div>
+                        </div>
                     </div>
                 </div>
 
+                {/* Message Display */}
                 {message && (
-                    <div className={`alert ${isError ? 'alert-danger' : 'alert-success'}`}>
-                        <strong>{isError ? 'Error:' : 'Success:'}</strong> {message}
+                    <div className={`message-card ${isError ? 'error' : 'success'}`}>
+                        <div className="message-icon">
+                            {isError ? '⚠️' : '✅'}
+                        </div>
+                        <div className="message-text">{message}</div>
                     </div>
                 )}
 
-                <form onSubmit={handleSubmit} className="ticket-creation-form">
-                    <div className="form-section">
-                        <h3 className="section-title">
-                            <span className="section-icon">📝</span>
-                            Basic Information
-                        </h3>
-
-                        <div className="form-group">
-                            <label htmlFor="title">
-                                <span className="label-icon">🏷️</span>
-                                Ticket Title
-                                <span className="required">*</span>
-                            </label>
-                            <div className="input-wrapper">
-                                <input
-                                    type="text"
-                                    id="title"
-                                    value={title}
-                                    onChange={(e) => setTitle(e.target.value)}
-                                    required
-                                    placeholder="Brief description of the maintenance task"
-                                    disabled={loading}
-                                    maxLength="100"
-                                />
-                                <div className={`character-count ${titleCount.isOverLimit ? 'over-limit' : ''}`}>
-                                    {titleCount.current}/100
+                {/* Form Container */}
+                <div className="form-card-modern">
+                    <form onSubmit={handleSubmit} className="stepped-form">
+                        
+                        {/* Step 1: Basic Information */}
+                        {currentStep === 1 && (
+                            <div className="form-step active">
+                                <div className="step-header">
+                                    <h2>📝 Basic Information</h2>
+                                    <p>Tell us what needs to be maintained</p>
                                 </div>
-                            </div>
-                        </div>
 
-                        <div className="form-group">
-                            <label htmlFor="description">
-                                <span className="label-icon">📄</span>
-                                Detailed Description
-                                <span className="required">*</span>
-                            </label>
-                            <div className="input-wrapper">
-                                <textarea
-                                    id="description"
-                                    value={description}
-                                    onChange={(e) => setDescription(e.target.value)}
-                                    required
-                                    placeholder="Provide detailed notes about the maintenance task, location, tools needed, safety considerations, etc."
-                                    disabled={loading}
-                                    maxLength="1000"
-                                ></textarea>
-                                <div className={`character-count ${descriptionCount.isOverLimit ? 'over-limit' : ''}`}>
-                                    {descriptionCount.current}/1000
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="form-section">
-                        <h3 className="section-title">
-                            <span className="section-icon">📅</span>
-                            Scheduling
-                        </h3>
-
-                        <div className="form-group date-picker-container">
-                            <label htmlFor="dueDate">
-                                <span className="label-icon">⏰</span>
-                                Due Date
-                                <span className="required">*</span>
-                            </label>
-                            <div className="input-wrapper">
-                                <DatePicker
-                                    selected={dueDate}
-                                    onChange={(date) => setDueDate(date)}
-                                    dateFormat="EEEE, MMMM do, yyyy"
-                                    minDate={new Date()}
-                                    required
-                                    disabled={loading}
-                                    placeholderText="Select due date"
-                                />
-                            </div>
-                            <div className="date-helper">
-                                Selected: {dueDate.toLocaleDateString('en-US', {
-                                    weekday: 'long',
-                                    year: 'numeric',
-                                    month: 'long',
-                                    day: 'numeric'
-                                })}
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="form-section">
-                        <h3 className="section-title">
-                            <span className="section-icon">📸</span>
-                            Documentation
-                        </h3>
-
-                        <div className="form-group">
-                            <label htmlFor="image">
-                                <span className="label-icon">🖼️</span>
-                                Attach Photo
-                                <span className="optional">(Optional)</span>
-                            </label>
-                            <div className="file-upload-wrapper">
-                                {!imagePreview ? (
-                                    <div className="file-upload-area">
+                                <div className="form-group-modern">
+                                    <label className="form-label-modern">
+                                        <span className="label-text">Ticket Title</span>
+                                        <span className="required-indicator">*</span>
+                                    </label>
+                                    <div className="input-container">
                                         <input
-                                            type="file"
-                                            id="image"
-                                            accept="image/*"
-                                            onChange={handleImageChange}
+                                            type="text"
+                                            value={formData.title}
+                                            onChange={(e) => handleInputChange('title', e.target.value)}
+                                            placeholder="e.g., Fix leaking faucet in kitchen"
+                                            className="input-modern"
+                                            maxLength="100"
                                             disabled={loading}
                                         />
-                                        <div className="upload-content">
-                                            <div className="upload-icon">📁</div>
-                                            <div className="upload-text">
-                                                <strong>Click to upload</strong> or drag and drop
-                                            </div>
-                                            <div className="upload-hint">
-                                                PNG, JPG, GIF up to 10MB
+                                        <div className="input-footer">
+                                            <div className={`character-count-modern ${titleCount.isOverLimit ? 'over-limit' : ''}`}>
+                                                {titleCount.current}/100 characters
                                             </div>
                                         </div>
                                     </div>
-                                ) : (
-                                    <div className="image-preview-container">
-                                        <img src={imagePreview} alt="Preview" className="image-preview" />
-                                        <button
-                                            type="button"
-                                            onClick={removeImage}
-                                            className="remove-image-btn"
+                                </div>
+
+                                <div className="form-group-modern">
+                                    <label className="form-label-modern">
+                                        <span className="label-text">Priority Level</span>
+                                    </label>
+                                    <div className="priority-selector">
+                                        {['low', 'medium', 'high'].map((priority) => (
+                                            <button
+                                                key={priority}
+                                                type="button"
+                                                className={`priority-btn ${formData.priority === priority ? 'active' : ''}`}
+                                                onClick={() => handleInputChange('priority', priority)}
+                                                style={{
+                                                    '--priority-color': getPriorityColor(priority)
+                                                }}
+                                                disabled={loading}
+                                            >
+                                                <div className="priority-indicator"></div>
+                                                <span className="priority-label">
+                                                    {priority.charAt(0).toUpperCase() + priority.slice(1)}
+                                                </span>
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Step 2: Description */}
+                        {currentStep === 2 && (
+                            <div className="form-step active">
+                                <div className="step-header">
+                                    <h2>📄 Detailed Description</h2>
+                                    <p>Provide comprehensive details about the maintenance task</p>
+                                </div>
+
+                                <div className="form-group-modern">
+                                    <label className="form-label-modern">
+                                        <span className="label-text">Description</span>
+                                        <span className="required-indicator">*</span>
+                                    </label>
+                                    <div className="textarea-container">
+                                        <textarea
+                                            value={formData.description}
+                                            onChange={(e) => handleInputChange('description', e.target.value)}
+                                            placeholder="Describe the issue in detail. Include location, tools needed, safety considerations, and any other relevant information..."
+                                            className="textarea-modern"
+                                            rows="8"
+                                            maxLength="1000"
                                             disabled={loading}
-                                        >
-                                            <span>✕</span>
-                                        </button>
-                                        <div className="image-info">
-                                            <span className="image-name">{image?.name}</span>
-                                            <span className="image-size">
-                                                {(image?.size / 1024 / 1024).toFixed(2)} MB
-                                            </span>
+                                        ></textarea>
+                                        <div className="input-footer">
+                                            <div className={`character-count-modern ${descriptionCount.isOverLimit ? 'over-limit' : ''}`}>
+                                                {descriptionCount.current}/1000 characters
+                                            </div>
                                         </div>
                                     </div>
+                                </div>
+
+                                <div className="form-group-modern">
+                                    <label className="form-label-modern">
+                                        <span className="label-text">Due Date</span>
+                                        <span className="required-indicator">*</span>
+                                    </label>
+                                    <div className="date-picker-modern">
+                                        <DatePicker
+                                            selected={formData.dueDate}
+                                            onChange={(date) => handleInputChange('dueDate', date)}
+                                            dateFormat="EEEE, MMMM do, yyyy"
+                                            minDate={new Date()}
+                                            className="input-modern"
+                                            placeholderText="Select due date"
+                                            disabled={loading}
+                                        />
+                                        <div className="date-display">
+                                            Selected: {formData.dueDate.toLocaleDateString('en-US', {
+                                                weekday: 'long',
+                                                year: 'numeric',
+                                                month: 'long',
+                                                day: 'numeric'
+                                            })}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Step 3: Image Upload */}
+                        {currentStep === 3 && (
+                            <div className="form-step active">
+                                <div className="step-header">
+                                    <h2>📸 Visual Documentation</h2>
+                                    <p>Add a photo to help illustrate the maintenance task (optional)</p>
+                                </div>
+
+                                <div className="image-upload-section">
+                                    {!imagePreview ? (
+                                        <div 
+                                            className={`upload-dropzone ${isDragOver ? 'drag-over' : ''}`}
+                                            onDragOver={handleDragOver}
+                                            onDragLeave={handleDragLeave}
+                                            onDrop={handleDrop}
+                                        >
+                                            <input
+                                                id="image-input"
+                                                type="file"
+                                                accept="image/*"
+                                                onChange={handleFileInputChange}
+                                                className="file-input-hidden"
+                                                disabled={loading}
+                                            />
+                                            <label htmlFor="image-input" className="upload-area">
+                                                <div className="upload-content">
+                                                    <div className="upload-icon">📁</div>
+                                                    <div className="upload-text">
+                                                        <span className="primary-text">Click to upload</span>
+                                                        <span className="secondary-text">or drag and drop here</span>
+                                                    </div>
+                                                    <div className="upload-specs">
+                                                        PNG, JPG, GIF • Max 10MB
+                                                    </div>
+                                                </div>
+                                            </label>
+                                        </div>
+                                    ) : (
+                                        <div className="image-preview-section">
+                                            <div className="preview-container">
+                                                <img 
+                                                    src={imagePreview} 
+                                                    alt="Preview" 
+                                                    className="preview-image"
+                                                />
+                                                <button
+                                                    type="button"
+                                                    onClick={removeImage}
+                                                    className="remove-image-button"
+                                                    disabled={loading}
+                                                >
+                                                    <span>✕</span>
+                                                </button>
+                                            </div>
+                                            <div className="image-details">
+                                                <div className="image-name">{image?.name}</div>
+                                                <div className="image-size">
+                                                    {(image?.size / 1024 / 1024).toFixed(2)} MB
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Navigation Buttons */}
+                        <div className="form-navigation">
+                            <div className="nav-left">
+                                {currentStep > 1 && (
+                                    <button
+                                        type="button"
+                                        onClick={prevStep}
+                                        className="nav-btn secondary"
+                                        disabled={loading}
+                                    >
+                                        <span className="btn-icon">←</span>
+                                        <span>Previous</span>
+                                    </button>
+                                )}
+                            </div>
+
+                            <div className="nav-right">
+                                {currentStep < 3 ? (
+                                    <button
+                                        type="button"
+                                        onClick={nextStep}
+                                        className="nav-btn primary"
+                                        disabled={!isStepValid(currentStep) || loading}
+                                    >
+                                        <span>Next</span>
+                                        <span className="btn-icon">→</span>
+                                    </button>
+                                ) : (
+                                    <button
+                                        type="submit"
+                                        className="nav-btn submit"
+                                        disabled={loading || !isStepValid(1) || !isStepValid(2)}
+                                    >
+                                        {loading ? (
+                                            <>
+                                                <div className="loading-spinner-small"></div>
+                                                <span>Creating...</span>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <span>Create Ticket</span>
+                                                <span className="btn-icon">🎫</span>
+                                            </>
+                                        )}
+                                    </button>
                                 )}
                             </div>
                         </div>
-                    </div>
-
-                    <div className="form-actions">
-                        <button 
-                            type="submit" 
-                            className="btn btn-primary btn-create-ticket"
-                            disabled={loading || titleCount.isOverLimit || descriptionCount.isOverLimit}
-                        >
-                            {loading ? (
-                                <>
-                                    <div className="loading-spinner-small"></div>
-                                    <span>Creating Ticket...</span>
-                                </>
-                            ) : (
-                                <>
-                                    <span>Create Maintenance Ticket</span>
-                                    <div className="btn-icon">🎫</div>
-                                </>
-                            )}
-                        </button>
-                        
-                        <button 
-                            type="button" 
-                            className="btn btn-secondary"
-                            onClick={() => navigate('/dashboard')} 
-                            disabled={loading}
-                        >
-                            <span>Cancel</span>
-                            <div className="btn-icon">←</div>
-                        </button>
-                    </div>
-                </form>
+                    </form>
+                </div>
             </div>
         </div>
     );

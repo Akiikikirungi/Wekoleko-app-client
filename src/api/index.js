@@ -3,7 +3,7 @@ import axios from 'axios';
 
 const API = axios.create({
     // Point to your backend server. Use your local IP if testing on a different device.
-    baseURL: 'http://localhost:8000/api',
+    baseURL: process.env.REACT_APP_API_BASE_URL,
     headers: {
         'Content-Type': 'application/json',
     },

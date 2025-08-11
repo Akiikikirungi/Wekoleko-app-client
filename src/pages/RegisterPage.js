@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Link } from 'react-router-dom';
+import { FaUserPlus, FaUserCircle, FaLock, FaCheck, FaTimes, FaSpinner } from 'react-icons/fa';
 
 const RegisterPage = () => {
     const [email, setEmail] = useState('');
@@ -44,50 +45,51 @@ const RegisterPage = () => {
     const passwordStrength = getPasswordStrength(password);
 
     return (
-        <div className="container">
-            <div className="form-container">
-                <div className="form-header">
-                    <div className="form-logo">
-                        <div className="logo-icon">✨</div>
-                        <h2>Join Wekoleko</h2>
-                        <p>Create your account to start managing maintenance tasks</p>
-                    </div>
+        <div className="auth-container">
+            <div className="auth-card">
+                <div className="auth-header">
+                    <FaUserPlus className="auth-icon" />
+                    <h2 className="auth-title">Join Wekoleko</h2>
+                    <p className="auth-subtitle">Create your account to start managing maintenance tasks</p>
                 </div>
 
                 {message && (
-                    <div className={`alert ${isError ? 'alert-danger' : 'alert-success'}`}>
-                        <strong>{isError ? 'Error:' : 'Success:'}</strong> {message}
+                    <div className={`message-card ${isError ? 'error' : 'success'}`}>
+                        <div className="message-icon">{isError ? '❌' : '✅'}</div>
+                        <span>{message}</span>
                     </div>
                 )}
 
                 <form onSubmit={handleSubmit} className="auth-form">
-                    <div className="form-group">
-                        <label htmlFor="email">
-                            <span className="label-icon">📧</span>
+                    <div className="form-group-modern">
+                        <label htmlFor="email" className="form-label-modern">
                             Email Address
                         </label>
-                        <div className="input-wrapper">
+                        <div className="input-container">
+                            <FaUserCircle className="input-icon-modern" />
                             <input
                                 type="email"
                                 id="email"
+                                className="input-modern"
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
                                 required
-                                placeholder="Enter your email address"
+                                placeholder="your.email@example.com"
                                 disabled={isLoading}
                             />
                         </div>
                     </div>
 
-                    <div className="form-group">
-                        <label htmlFor="password">
-                            <span className="label-icon">🔒</span>
+                    <div className="form-group-modern">
+                        <label htmlFor="password" className="form-label-modern">
                             Password
                         </label>
-                        <div className="input-wrapper">
+                        <div className="input-container">
+                            <FaLock className="input-icon-modern" />
                             <input
                                 type="password"
                                 id="password"
+                                className="input-modern"
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
                                 required
@@ -116,15 +118,16 @@ const RegisterPage = () => {
                         )}
                     </div>
 
-                    <div className="form-group">
-                        <label htmlFor="confirmPassword">
-                            <span className="label-icon">🔐</span>
+                    <div className="form-group-modern">
+                        <label htmlFor="confirmPassword" className="form-label-modern">
                             Confirm Password
                         </label>
-                        <div className="input-wrapper">
+                        <div className="input-container">
+                            <FaLock className="input-icon-modern" />
                             <input
                                 type="password"
                                 id="confirmPassword"
+                                className="input-modern"
                                 value={confirmPassword}
                                 onChange={(e) => setConfirmPassword(e.target.value)}
                                 required
@@ -132,46 +135,38 @@ const RegisterPage = () => {
                                 disabled={isLoading}
                             />
                         </div>
-                        {confirmPassword && password !== confirmPassword && (
-                            <div className="password-mismatch">
-                                <span>❌ Passwords don't match</span>
-                            </div>
-                        )}
-                        {confirmPassword && password === confirmPassword && password.length > 0 && (
-                            <div className="password-match">
-                                <span>✅ Passwords match</span>
+                        {confirmPassword && password.length > 0 && (
+                            <div className={`password-match-indicator ${password === confirmPassword ? 'match' : 'mismatch'}`}>
+                                {password === confirmPassword ? <FaCheck /> : <FaTimes />}
+                                <span>{password === confirmPassword ? 'Passwords match' : 'Passwords do not match'}</span>
                             </div>
                         )}
                     </div>
 
                     <button 
                         type="submit" 
-                        className="btn btn-primary btn-full-width"
+                        className="nav-btn primary auth-btn"
                         disabled={isLoading || password !== confirmPassword}
                     >
                         {isLoading ? (
                             <>
-                                <div className="loading-spinner-small"></div>
+                                <FaSpinner className="spin-icon" />
                                 <span>Creating Account...</span>
                             </>
                         ) : (
                             <>
                                 <span>Create Account</span>
-                                <div className="btn-icon">✨</div>
+                                <FaUserPlus className="btn-icon" />
                             </>
                         )}
                     </button>
                 </form>
 
-                <div className="form-footer">
-                    <div className="divider">
-                        <span>Already have an account?</span>
-                    </div>
+                <div className="auth-footer">
                     <p className="auth-switch">
-                        Ready to sign in? 
-                        <Link to="/login" className="auth-link">
+                        Already have an account? 
+                        <Link to="/login" className="auth-link-modern">
                             Login here
-                            <span className="link-arrow">→</span>
                         </Link>
                     </p>
                 </div>
