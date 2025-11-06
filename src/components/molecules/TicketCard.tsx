@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { format, isToday, isTomorrow, isYesterday } from 'date-fns';
@@ -8,7 +8,7 @@ const TicketCard = ({ ticket, ...motionProps }) => {
     const [imageError, setImageError] = useState(false);
     
     const isPastDue = ticket.status === 'open' && new Date(ticket.dueDate) < new Date();
-    const daysUntilDue = Math.ceil((new Date(ticket.dueDate) - new Date()) / (1000 * 60 * 60 * 24));
+    const daysUntilDue = Math.ceil((new Date(ticket.dueDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
     
     const getUrgencyLevel = () => {
         if (isPastDue) return 'overdue';

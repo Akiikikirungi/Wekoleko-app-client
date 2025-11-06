@@ -363,8 +363,8 @@ export const MatchIndicator = styled.div<{ $isMatching: boolean }>`
 // --- Submit Button ---
 
 // FIX: Properly type the motion button component
-export const SubmitButton = styled(motion.button as React.ComponentType<React.ButtonHTMLAttributes<HTMLButtonElement> & MotionProps>)`
- ${primaryButtonStyles}; 
+export const SubmitButton = styled(motion.button)`
+  ${primaryButtonStyles}; 
   width: 100%;
   padding: 0.75rem 1rem; /* py-3 */
   font-size: 1.125rem; /* text-lg */
