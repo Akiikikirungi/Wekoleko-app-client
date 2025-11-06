@@ -3,7 +3,7 @@ import axios, { AxiosInstance, AxiosError, InternalAxiosRequestConfig } from 'ax
 
 // Create axios instance with base configuration
 const API: AxiosInstance = axios.create({
-  baseURL: process.env.REACT_APP_API_BASE_URL || 'http://localhost:8000/api',
+  baseURL: import.meta.env.REACT_APP_API_BASE_URL || 'http://localhost:8000/api', // Changed = to :
   headers: {
     'Content-Type': 'application/json',
   },
